@@ -4,7 +4,7 @@ from anthropic import AsyncAnthropic
 from anthropic.types import ToolParam
 
 from src.config.settings import settings
-from src.core.entities.evaluation import MistakeItem, TurnEvaluation
+from src.core.entities.evaluation import MistakeItem, TurnEvaluation, VocabularyNote
 
 EVALUATOR_SYSTEM_PROMPT = """You are an experienced English teacher assessing one \
 spoken utterance from a student. The student is a QA/QC engineer from Uzbekistan, \
@@ -18,6 +18,12 @@ Only report mistakes that are real and worth the student's attention — do not 
 nitpicks in an already-correct short sentence. If the utterance has no meaningful \
 mistakes, return an empty mistakes list and set corrected_sentence equal to (or a \
 slightly more natural phrasing of) the original.
+
+Also extract 0-2 vocabulary_notes: specific words or short phrases worth the student \
+memorizing from this turn — either a word they got wrong, or a useful word/phrase they \
+could have used but didn't (e.g. a more natural way to say something they expressed \
+clumsily). Give a short Russian translation and a short example sentence for each. \
+Skip this entirely for trivial utterances with nothing worth memorizing.
 
 Always call the submit_evaluation tool with your assessment. Never reply in plain text."""
 
@@ -48,6 +54,18 @@ EVALUATION_TOOL: ToolParam = {
                     "required": ["category", "original", "corrected", "explanation"],
                 },
             },
+            "vocabulary_notes": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "word_or_phrase": {"type": "string"},
+                        "translation_ru": {"type": "string"},
+                        "example_sentence": {"type": "string"},
+                    },
+                    "required": ["word_or_phrase", "translation_ru", "example_sentence"],
+                },
+            },
         },
         "required": [
             "grammar_score",
@@ -56,6 +74,7 @@ EVALUATION_TOOL: ToolParam = {
             "naturalness_score",
             "corrected_sentence",
             "mistakes",
+            "vocabulary_notes",
         ],
     },
 }
@@ -86,4 +105,5 @@ class ClaudeTurnEvaluator:
             naturalness_score=tool_input["naturalness_score"],
             corrected_sentence=tool_input["corrected_sentence"],
             mistakes=[MistakeItem(**item) for item in tool_input["mistakes"]],
+            vocabulary_notes=[VocabularyNote(**item) for item in tool_input["vocabulary_notes"]],
         )

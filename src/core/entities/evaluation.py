@@ -10,6 +10,13 @@ class MistakeItem:
 
 
 @dataclass(frozen=True)
+class VocabularyNote:
+    word_or_phrase: str
+    translation_ru: str
+    example_sentence: str
+
+
+@dataclass(frozen=True)
 class TurnEvaluation:
     grammar_score: int
     vocabulary_score: int
@@ -17,3 +24,4 @@ class TurnEvaluation:
     naturalness_score: int
     corrected_sentence: str
     mistakes: list[MistakeItem] = field(default_factory=list)
+    vocabulary_notes: list[VocabularyNote] = field(default_factory=list)

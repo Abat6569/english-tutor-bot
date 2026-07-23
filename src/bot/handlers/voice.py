@@ -11,6 +11,7 @@ from src.core.use_cases.run_speaking_turn import RunSpeakingTurn
 from src.infrastructure.db.repositories.message_repository import MessageRepository
 from src.infrastructure.db.repositories.mistake_repository import MistakeRepository
 from src.infrastructure.db.repositories.user_repository import UserRepository
+from src.infrastructure.db.repositories.vocabulary_repository import VocabularyRepository
 from src.infrastructure.db.session import get_session
 from src.infrastructure.external.audio_convert import mp3_to_ogg_opus
 from src.infrastructure.stt.groq_stt import GroqSTT
@@ -34,14 +35,24 @@ _background_tasks: set[asyncio.Task[None]] = set()
 
 
 def _format_feedback(evaluation: TurnEvaluation) -> str | None:
-    if not evaluation.mistakes:
+    if not evaluation.mistakes and not evaluation.vocabulary_notes:
         return None
 
-    lines = ["📝 <b>Quick correction</b>"]
-    for item in evaluation.mistakes[:MAX_MISTAKES_SHOWN]:
-        lines.append(
-            f'"{escape(item.original)}" → "{escape(item.corrected)}"\n{escape(item.explanation)}'
-        )
+    lines = []
+    if evaluation.mistakes:
+        lines.append("📝 <b>Quick correction</b>")
+        for item in evaluation.mistakes[:MAX_MISTAKES_SHOWN]:
+            lines.append(
+                f'"{escape(item.original)}" → "{escape(item.corrected)}"\n'
+                f"{escape(item.explanation)}"
+            )
+    if evaluation.vocabulary_notes:
+        lines.append("📚 <b>Word to remember</b>")
+        for note in evaluation.vocabulary_notes[:2]:
+            lines.append(
+                f"<b>{escape(note.word_or_phrase)}</b> — {escape(note.translation_ru)}\n"
+                f"<i>{escape(note.example_sentence)}</i>"
+            )
     return "\n\n".join(lines)
 
 
@@ -51,6 +62,7 @@ async def _evaluate_and_notify(bot: Bot, chat_id: int, user_id: int, user_uttera
             use_case = EvaluateSpeakingTurn(
                 evaluator=_evaluator,
                 mistakes=MistakeRepository(session),
+                vocabulary=VocabularyRepository(session),
             )
             evaluation = await use_case.execute(user_id, user_utterance)
     except Exception:
