@@ -2,6 +2,9 @@ from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
 
+from src.infrastructure.db.repositories.user_repository import UserRepository
+from src.infrastructure.db.session import get_session
+
 router = Router(name="start")
 
 WELCOME_TEXT = (
@@ -26,6 +29,11 @@ HELP_TEXT = (
 
 @router.message(Command("start"))
 async def cmd_start(message: Message) -> None:
+    assert message.from_user is not None
+    async with get_session() as session:
+        await UserRepository(session).get_or_create(
+            message.from_user.id, message.from_user.username
+        )
     await message.answer(WELCOME_TEXT)
 
 
