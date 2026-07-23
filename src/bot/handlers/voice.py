@@ -5,6 +5,7 @@ import structlog
 from aiogram import Bot, F, Router
 from aiogram.types import BufferedInputFile, Message
 
+from src.bot.handlers.interview import handle_interview_voice
 from src.core.entities.conversation import ConversationTurn
 from src.core.entities.evaluation import TurnEvaluation
 from src.core.use_cases.evaluate_speaking_turn import EvaluateSpeakingTurn
@@ -128,7 +129,10 @@ async def handle_voice(message: Message) -> None:
     assert message.voice is not None
     assert message.bot is not None
 
-    await message.bot.send_chat_action(message.chat.id, "record_voice")
+    async with get_session() as session:
+        user = await UserRepository(session).get_or_create(
+            message.from_user.id, message.from_user.username
+        )
 
     file = await message.bot.get_file(message.voice.file_id)
     assert file.file_path is not None
@@ -136,10 +140,13 @@ async def handle_voice(message: Message) -> None:
     assert buffer is not None
     audio_bytes = buffer.read()
 
+    if user.settings_json.get("mode") == "interview":
+        await handle_interview_voice(message, user, audio_bytes)
+        return
+
+    await message.bot.send_chat_action(message.chat.id, "record_voice")
+
     async with get_session() as session:
-        user = await UserRepository(session).get_or_create(
-            message.from_user.id, message.from_user.username
-        )
         use_case = RunSpeakingTurn(
             stt=_stt,
             llm=_pick_conversation_provider(user),
