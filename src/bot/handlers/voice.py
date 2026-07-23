@@ -6,6 +6,7 @@ from aiogram import Bot, F, Router
 from aiogram.types import BufferedInputFile, Message
 
 from src.bot.handlers.interview import handle_interview_voice
+from src.bot.handlers.translator import handle_translator_voice
 from src.core.entities.conversation import ConversationTurn
 from src.core.entities.evaluation import TurnEvaluation
 from src.core.use_cases.evaluate_speaking_turn import EvaluateSpeakingTurn
@@ -140,8 +141,12 @@ async def handle_voice(message: Message) -> None:
     assert buffer is not None
     audio_bytes = buffer.read()
 
-    if user.settings_json.get("mode") == "interview":
+    mode = user.settings_json.get("mode")
+    if mode == "interview":
         await handle_interview_voice(message, user, audio_bytes)
+        return
+    if mode == "translator":
+        await handle_translator_voice(message, user, audio_bytes)
         return
 
     await message.bot.send_chat_action(message.chat.id, "record_voice")

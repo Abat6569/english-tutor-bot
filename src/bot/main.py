@@ -5,7 +5,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 
-from src.bot.handlers import interview, lesson, modes, start, voice
+from src.bot.handlers import interview, lesson, modes, start, translator, voice
 from src.bot.middlewares.access_control import AccessControlMiddleware
 from src.config.settings import settings
 
@@ -22,6 +22,7 @@ async def main() -> None:
     dp.include_router(modes.router)
     dp.include_router(interview.router)
     dp.include_router(voice.router)
+    dp.include_router(translator.router)
 
     log.info("bot_starting")
     await bot.delete_webhook(drop_pending_updates=True)
