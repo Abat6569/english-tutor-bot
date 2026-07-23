@@ -1,0 +1,28 @@
+import asyncio
+
+import structlog
+from aiogram import Bot, Dispatcher
+from aiogram.client.default import DefaultBotProperties
+from aiogram.enums import ParseMode
+
+from src.bot.handlers import start
+from src.bot.middlewares.access_control import AccessControlMiddleware
+from src.config.settings import settings
+
+log = structlog.get_logger()
+
+
+async def main() -> None:
+    bot = Bot(token=settings.bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+    dp = Dispatcher()
+
+    dp.message.middleware(AccessControlMiddleware())
+    dp.include_router(start.router)
+
+    log.info("bot_starting")
+    await bot.delete_webhook(drop_pending_updates=True)
+    await dp.start_polling(bot)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
