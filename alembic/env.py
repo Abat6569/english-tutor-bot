@@ -8,6 +8,7 @@ from alembic import context
 from src.config.settings import settings
 from src.infrastructure.db.models.base import Base
 from src.infrastructure.db.models import (  # noqa: F401  registers models on Base.metadata
+    achievement,
     message,
     mistake,
     translation,

@@ -7,6 +7,7 @@ from aiogram.types import BufferedInputFile, Message
 
 from src.core.use_cases.run_interview_turn import RunInterviewTurn
 from src.infrastructure.db.models.user import User
+from src.infrastructure.db.repositories.achievement_repository import AchievementRepository
 from src.infrastructure.db.repositories.message_repository import MessageRepository
 from src.infrastructure.db.repositories.user_repository import UserRepository
 from src.infrastructure.db.session import get_session
@@ -14,6 +15,7 @@ from src.infrastructure.external.audio_convert import mp3_to_ogg_opus
 from src.infrastructure.stt.groq_stt import GroqSTT
 from src.infrastructure.tts.edge_tts_adapter import EdgeTTS
 from src.services.ai.claude_interviewer import ClaudeInterviewCoach
+from src.services.gamification.xp_service import GamificationService
 
 router = Router(name="interview")
 log = structlog.get_logger()
@@ -139,3 +141,9 @@ async def handle_interview_voice(message: Message, user: User, audio_bytes: byte
                 interview_question=next_question,
                 interview_asked=asked,
             )
+
+        gamification = GamificationService(users=repo, achievements=AchievementRepository(session))
+        update = await gamification.record_activity(message.from_user.id, xp_gained=20)
+
+    if update.newly_unlocked:
+        await message.answer("\n".join(f"🎉 {label}" for label in update.newly_unlocked))

@@ -1,6 +1,6 @@
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import JSON, BigInteger, DateTime, String, func
+from sqlalchemy import JSON, BigInteger, Date, DateTime, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.infrastructure.db.models.base import Base
@@ -16,6 +16,9 @@ class User(Base):
     target_level: Mapped[str] = mapped_column(String(8), default="B2")
     timezone: Mapped[str] = mapped_column(String(64), default="Asia/Tashkent")
     settings_json: Mapped[dict[str, object]] = mapped_column(JSON, default=dict)
+    xp: Mapped[int] = mapped_column(default=0)
+    streak_days: Mapped[int] = mapped_column(default=0)
+    last_activity_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     last_active_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

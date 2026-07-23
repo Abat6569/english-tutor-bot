@@ -12,6 +12,7 @@ from src.core.entities.evaluation import TurnEvaluation
 from src.core.use_cases.evaluate_speaking_turn import EvaluateSpeakingTurn
 from src.core.use_cases.run_speaking_turn import RunSpeakingTurn
 from src.infrastructure.db.models.user import User
+from src.infrastructure.db.repositories.achievement_repository import AchievementRepository
 from src.infrastructure.db.repositories.message_repository import MessageRepository
 from src.infrastructure.db.repositories.mistake_repository import MistakeRepository
 from src.infrastructure.db.repositories.user_repository import UserRepository
@@ -23,6 +24,7 @@ from src.infrastructure.tts.edge_tts_adapter import EdgeTTS
 from src.services.ai.claude_client import ClaudeConversationProvider
 from src.services.ai.claude_evaluator import ClaudeTurnEvaluator
 from src.services.ai.claude_professional import ClaudeProfessionalProvider
+from src.services.gamification.xp_service import GamificationService
 
 router = Router(name="voice")
 log = structlog.get_logger()
@@ -117,11 +119,31 @@ async def _evaluate_and_notify(bot: Bot, chat_id: int, user_id: int, user_uttera
         mistake_count=len(evaluation.mistakes),
     )
 
-    feedback_text = _format_feedback(evaluation)
-    if feedback_text is None:
-        return
+    xp_gained = 10 + (
+        evaluation.grammar_score
+        + evaluation.vocabulary_score
+        + evaluation.fluency_score
+        + evaluation.naturalness_score
+    )
+    try:
+        async with get_session() as session:
+            gamification = GamificationService(
+                users=UserRepository(session), achievements=AchievementRepository(session)
+            )
+            update = await gamification.record_activity(user_id, xp_gained)
+    except Exception:
+        log.exception("gamification_update_failed", user_id=user_id)
+        update = None
 
-    await bot.send_message(chat_id, feedback_text)
+    lines = []
+    feedback_text = _format_feedback(evaluation)
+    if feedback_text is not None:
+        lines.append(feedback_text)
+    if update is not None and update.newly_unlocked:
+        lines.append("\n".join(f"🎉 {label}" for label in update.newly_unlocked))
+
+    if lines:
+        await bot.send_message(chat_id, "\n\n".join(lines))
 
 
 @router.message(F.voice)
