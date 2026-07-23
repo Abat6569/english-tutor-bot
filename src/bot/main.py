@@ -5,7 +5,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 
-from src.bot.handlers import lesson, start, voice
+from src.bot.handlers import lesson, modes, start, voice
 from src.bot.middlewares.access_control import AccessControlMiddleware
 from src.config.settings import settings
 
@@ -19,6 +19,7 @@ async def main() -> None:
     dp.message.middleware(AccessControlMiddleware())
     dp.include_router(start.router)
     dp.include_router(lesson.router)
+    dp.include_router(modes.router)
     dp.include_router(voice.router)
 
     log.info("bot_starting")

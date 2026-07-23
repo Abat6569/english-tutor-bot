@@ -14,3 +14,10 @@ class UserRepository:
             self._session.add(user)
             await self._session.commit()
         return user
+
+    async def update_settings(self, telegram_id: int, **updates: str) -> User:
+        user = await self._session.get(User, telegram_id)
+        assert user is not None
+        user.settings_json = {**user.settings_json, **updates}
+        await self._session.commit()
+        return user

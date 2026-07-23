@@ -14,7 +14,8 @@ WELCOME_TEXT = (
 
 HELP_TEXT = (
     "/lesson — today's adaptive lesson\n"
-    "/speaking — free conversation practice\n"
+    "/speaking — free conversation practice (default mode)\n"
+    "/professional — QA/QC role-play (EPC contractor, inspector, client)\n"
     "/interview — interview coaching\n"
     "/translator — translation mode\n"
     "/vocabulary — your saved words\n"

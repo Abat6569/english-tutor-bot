@@ -5,9 +5,11 @@ import structlog
 from aiogram import Bot, F, Router
 from aiogram.types import BufferedInputFile, Message
 
+from src.core.entities.conversation import ConversationTurn
 from src.core.entities.evaluation import TurnEvaluation
 from src.core.use_cases.evaluate_speaking_turn import EvaluateSpeakingTurn
 from src.core.use_cases.run_speaking_turn import RunSpeakingTurn
+from src.infrastructure.db.models.user import User
 from src.infrastructure.db.repositories.message_repository import MessageRepository
 from src.infrastructure.db.repositories.mistake_repository import MistakeRepository
 from src.infrastructure.db.repositories.user_repository import UserRepository
@@ -18,6 +20,7 @@ from src.infrastructure.stt.groq_stt import GroqSTT
 from src.infrastructure.tts.edge_tts_adapter import EdgeTTS
 from src.services.ai.claude_client import ClaudeConversationProvider
 from src.services.ai.claude_evaluator import ClaudeTurnEvaluator
+from src.services.ai.claude_professional import ClaudeProfessionalProvider
 
 router = Router(name="voice")
 log = structlog.get_logger()
@@ -25,6 +28,7 @@ log = structlog.get_logger()
 _stt = GroqSTT()
 _tts = EdgeTTS()
 _llm = ClaudeConversationProvider()
+_professional_llm = ClaudeProfessionalProvider()
 _evaluator = ClaudeTurnEvaluator()
 
 MAX_MISTAKES_SHOWN = 3
@@ -32,6 +36,38 @@ MAX_MISTAKES_SHOWN = 3
 # Fire-and-forget evaluation tasks must be kept referenced or asyncio may
 # garbage-collect them mid-flight.
 _background_tasks: set[asyncio.Task[None]] = set()
+
+
+class _ProfessionalModeAdapter:
+    """Adapts ClaudeProfessionalProvider's persona/topic call signature to the
+    plain (history, message) shape RunSpeakingTurn expects."""
+
+    def __init__(self, provider: ClaudeProfessionalProvider, user: User) -> None:
+        self._provider = provider
+        self._persona = str(user.settings_json["professional_persona"])
+        self._persona_description = str(user.settings_json["professional_persona_description"])
+        self._topic = str(user.settings_json["professional_topic"])
+
+    async def reply(self, history: list[ConversationTurn], user_message: str) -> str:
+        return await self._provider.reply(
+            history,
+            user_message,
+            persona=self._persona,
+            persona_description=self._persona_description,
+            topic=self._topic,
+        )
+
+
+def _pick_conversation_provider(
+    user: User,
+) -> ClaudeConversationProvider | _ProfessionalModeAdapter:
+    is_professional = (
+        user.settings_json.get("mode") == "professional"
+        and "professional_topic" in user.settings_json
+    )
+    if is_professional:
+        return _ProfessionalModeAdapter(_professional_llm, user)
+    return _llm
 
 
 def _format_feedback(evaluation: TurnEvaluation) -> str | None:
@@ -101,12 +137,12 @@ async def handle_voice(message: Message) -> None:
     audio_bytes = buffer.read()
 
     async with get_session() as session:
-        await UserRepository(session).get_or_create(
+        user = await UserRepository(session).get_or_create(
             message.from_user.id, message.from_user.username
         )
         use_case = RunSpeakingTurn(
             stt=_stt,
-            llm=_llm,
+            llm=_pick_conversation_provider(user),
             tts=_tts,
             messages=MessageRepository(session),
         )
