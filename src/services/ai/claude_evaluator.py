@@ -87,7 +87,7 @@ class ClaudeTurnEvaluator:
     async def evaluate(self, user_utterance: str) -> TurnEvaluation:
         response = await self._client.messages.create(
             model=settings.anthropic_evaluation_model,
-            max_tokens=500,
+            max_tokens=1024,
             system=EVALUATOR_SYSTEM_PROMPT,
             tools=[EVALUATION_TOOL],
             tool_choice={"type": "tool", "name": "submit_evaluation"},
@@ -99,11 +99,13 @@ class ClaudeTurnEvaluator:
         )
 
         return TurnEvaluation(
-            grammar_score=tool_input["grammar_score"],
-            vocabulary_score=tool_input["vocabulary_score"],
-            fluency_score=tool_input["fluency_score"],
-            naturalness_score=tool_input["naturalness_score"],
-            corrected_sentence=tool_input["corrected_sentence"],
-            mistakes=[MistakeItem(**item) for item in tool_input["mistakes"]],
-            vocabulary_notes=[VocabularyNote(**item) for item in tool_input["vocabulary_notes"]],
+            grammar_score=tool_input.get("grammar_score", 3),
+            vocabulary_score=tool_input.get("vocabulary_score", 3),
+            fluency_score=tool_input.get("fluency_score", 3),
+            naturalness_score=tool_input.get("naturalness_score", 3),
+            corrected_sentence=tool_input.get("corrected_sentence", ""),
+            mistakes=[MistakeItem(**item) for item in tool_input.get("mistakes", [])],
+            vocabulary_notes=[
+                VocabularyNote(**item) for item in tool_input.get("vocabulary_notes", [])
+            ],
         )

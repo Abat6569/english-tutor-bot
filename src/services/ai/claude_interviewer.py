@@ -54,7 +54,7 @@ class ClaudeInterviewCoach:
 
         response = await self._client.messages.create(
             model=settings.anthropic_evaluation_model,
-            max_tokens=400,
+            max_tokens=800,
             system=system_prompt,
             tools=[INTERVIEW_FEEDBACK_TOOL],
             tool_choice={"type": "tool", "name": "submit_interview_feedback"},
@@ -66,7 +66,7 @@ class ClaudeInterviewCoach:
         )
 
         return InterviewFeedback(
-            passes=tool_input["passes"],
-            score=tool_input["score"],
-            spoken_response=tool_input["spoken_response"],
+            passes=tool_input.get("passes", False),
+            score=tool_input.get("score", 3),
+            spoken_response=tool_input.get("spoken_response", "Sorry, could you say that again?"),
         )

@@ -78,7 +78,7 @@ class ClaudeTranslator:
     async def _call(self, content: list[dict[str, Any]]) -> TranslationResult:
         response = await self._client.messages.create(  # type: ignore[call-overload]
             model=settings.anthropic_conversation_model,
-            max_tokens=500,
+            max_tokens=1024,
             system=TRANSLATOR_SYSTEM_PROMPT,
             tools=[TRANSLATION_TOOL],
             tool_choice={"type": "tool", "name": "submit_translation"},
@@ -90,9 +90,9 @@ class ClaudeTranslator:
         )
 
         return TranslationResult(
-            source_language=tool_input["source_language"],
-            target_language=tool_input["target_language"],
-            natural_translation=tool_input["natural_translation"],
-            literal_translation=tool_input["literal_translation"],
-            word_notes=[WordNote(**item) for item in tool_input["word_notes"]],
+            source_language=tool_input.get("source_language", "other"),
+            target_language=tool_input.get("target_language", "en"),
+            natural_translation=tool_input.get("natural_translation", ""),
+            literal_translation=tool_input.get("literal_translation", ""),
+            word_notes=[WordNote(**item) for item in tool_input.get("word_notes", [])],
         )
