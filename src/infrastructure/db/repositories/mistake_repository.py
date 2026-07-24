@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -46,3 +48,12 @@ class MistakeRepository:
         stmt = select(subq.c.category, func.count()).group_by(subq.c.category)
         result = await self._session.execute(stmt)
         return dict(result.tuples().all())
+
+    async def count_since(self, user_id: int, since: datetime) -> int:
+        stmt = (
+            select(func.count())
+            .select_from(Mistake)
+            .where(Mistake.user_id == user_id, Mistake.created_at >= since)
+        )
+        result = await self._session.execute(stmt)
+        return result.scalar_one()

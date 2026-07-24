@@ -21,6 +21,7 @@ HELP_TEXT = (
     "/vocabulary — your saved words\n"
     "/grammar — your grammar stats\n"
     "/progress — XP, streak, dashboard\n"
+    "/reminders — configure daily/weekly/monthly practice reminders\n"
     "/settings — preferences\n"
     "/export — export your data\n"
     "/import — import your data\n"

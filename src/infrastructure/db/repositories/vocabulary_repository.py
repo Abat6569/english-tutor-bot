@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -39,3 +41,12 @@ class VocabularyRepository:
         )
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
+
+    async def count_since(self, user_id: int, since: datetime) -> int:
+        stmt = (
+            select(func.count())
+            .select_from(VocabularyItem)
+            .where(VocabularyItem.user_id == user_id, VocabularyItem.created_at >= since)
+        )
+        result = await self._session.execute(stmt)
+        return result.scalar_one()

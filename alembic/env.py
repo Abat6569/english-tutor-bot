@@ -11,6 +11,7 @@ from src.infrastructure.db.models import (  # noqa: F401  registers models on Ba
     achievement,
     message,
     mistake,
+    reminder,
     translation,
     user,
     vocabulary,
